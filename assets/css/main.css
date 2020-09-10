@@ -1,0 +1,19 @@
+#customer_card_field .optional {
+    display: none;
+}
+
+#customer_card_field.reject input[type="text"] {
+    border-color: #ee1b1b;
+}
+
+#customer_card_field.reject .description {
+    color: #ee1b1b;
+}
+
+#customer_card_field.approve input[type="text"] {
+    border-color: #15b215;
+}
+
+#customer_card_field .description {
+    font-size: 0.85em;
+}
