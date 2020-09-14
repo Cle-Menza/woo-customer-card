@@ -35,3 +35,28 @@
   margin: 0 0 0 5px !important;
 }
 
+.customers-pagination ul {
+  display: flex;
+  align-items: center;
+}
+
+.customers-pagination li {
+  box-sizing: border-box;
+  margin-bottom: 0;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 1;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  border: 1px solid #0071a1;
+}
+
+.customers-pagination li:not(:last-of-type) {
+  margin-right: 2px;
+}
+

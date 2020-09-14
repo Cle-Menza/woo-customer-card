@@ -5,6 +5,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class WOO_CUSTOMER_CARD {
+  private $admin_email;
+  private $mail_headers;
+  private $user_data;
+  private $user_meta;
+  private $exporter;
+  private $importer;
+  private $dashboard;
 
   /**
    * WOO_CUSTOMER_CARD constructor.
@@ -16,6 +23,22 @@ class WOO_CUSTOMER_CARD {
       'Content-Type: text/html; charset=UTF-8'
     );
 
+    $this->user_data = array(
+      'ID'         => esc_html__( 'User ID', WCC_DOMAIN ),
+      'user_login' => esc_html__( 'User Login', WCC_DOMAIN ),
+    );
+    $this->user_meta = array(
+      'customer_card'               => esc_html__( 'Customer Card', WCC_DOMAIN ),
+      'customer_card_prev'          => esc_html__( 'Prev. Card', WCC_DOMAIN ),
+      'customer_card_discount'      => esc_html__( 'Discount', WCC_DOMAIN ),
+      'customer_card_discount_prev' => esc_html__( 'Prev. Discount', WCC_DOMAIN ),
+      'customer_card_approve'       => esc_html__( 'Approve', WCC_DOMAIN )
+    );
+
+    $this->exporter = new WCC_EXPORTER( $this->user_data, $this->user_meta );
+    $this->importer = new WCC_IMPORTER( $this->user_data, $this->user_meta );
+    $this->dashboard = new WCC_DASHBOARD( $this->user_data, $this->user_meta );
+
     add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_public_scripts_and_styles' ) );
     add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts_and_styles' ) );
 
@@ -24,7 +47,6 @@ class WOO_CUSTOMER_CARD {
     add_action( 'woocommerce_edit_account_form_start', array( $this, 'add_card_field' ) );
     add_action( 'woocommerce_save_account_details', array( $this, 'save_account_details' ) );
     add_action( 'woocommerce_save_account_details_errors', array( $this, 'account_details_errors' ) );
-//    add_filter( 'woocommerce_save_account_details_required_fields', array( $this, 'make_field_required' ) );
 
     add_action( 'show_user_profile', array( $this, 'show_edit_user_profile' ) );
     add_action( 'edit_user_profile', array( $this, 'show_edit_user_profile' ) );
@@ -67,83 +89,56 @@ class WOO_CUSTOMER_CARD {
    * Render plugin page
    */
   public function plugin_setting_page() {
-    $users = get_users(
-      array(
-        'meta_query' => array(
-          'relation' => 'OR',
-          array(
-            'key'     => 'customer_card',
-            'value'   => '',
-            'compare' => '>'
-          ),
-          array(
-            'key'     => 'customer_card_prev',
-            'value'   => '',
-            'compare' => '>'
-          ),
-        )
-      )
-    );
-    ?>
-    <h1><?php esc_html_e( 'Customers table', WCC_DOMAIN ); ?></h1>
+    if ( isset ( $_GET['tab'] ) ) {
+      $tab = $_GET['tab'];
+    } else {
+      $tab = 'dashboard';
+    }
 
-    <table class="widefat customers-table">
-      <thead>
-      <tr>
-        <th><?php esc_html_e( 'ID', WCC_DOMAIN ); ?></th>
-        <th><?php esc_html_e( 'Login', WCC_DOMAIN ); ?></th>
-        <th><?php esc_html_e( 'Role', WCC_DOMAIN ); ?></th>
-        <th><?php esc_html_e( 'Card Number', WCC_DOMAIN ); ?></th>
-        <th><?php esc_html_e( 'Prev. Card', WCC_DOMAIN ); ?></th>
-        <th><?php esc_html_e( 'Discount', WCC_DOMAIN ); ?></th>
-        <th><?php esc_html_e( 'Prev. Discount', WCC_DOMAIN ); ?></th>
-        <th><?php esc_html_e( 'Approve', WCC_DOMAIN ); ?></th>
-        <th><?php esc_html_e( 'Edit user', WCC_DOMAIN ); ?></th>
-      </tr>
-      </thead>
-      <tbody>
-      <?php
-      foreach ( $users as $user ) {
-        $link                        = get_edit_user_link( $user->ID );
-        $customer_card               = get_the_author_meta( 'customer_card', $user->ID );
-        $customer_card_prev          = get_the_author_meta( 'customer_card_prev', $user->ID );
-        $customer_card_discount      = get_the_author_meta( 'customer_card_discount', $user->ID );
-        $customer_card_discount_prev = get_the_author_meta( 'customer_card_discount_prev', $user->ID );
-        $approve                     = get_the_author_meta( 'customer_card_approve', $user->ID );
-        ?>
-        <tr>
-          <td><?php echo $user->ID; ?></td>
-          <td><a href="<?php echo $link; ?>#customer_card_section" target="_blank"><?php echo $user->user_login; ?></a>
-          </td>
-          <td><?php echo implode( ',', $user->roles ); ?></td>
-          <td><?php echo $customer_card; ?></td>
-          <td><?php echo $customer_card_prev; ?></td>
-          <td><?php echo $customer_card_discount ? $customer_card_discount . '%' : ''; ?></td>
-          <td><?php echo $customer_card_discount_prev ? $customer_card_discount_prev . '%' : ''; ?></td>
-          <td>
-            <?php
-            switch ( $approve ) {
-              case 2:
-                echo '<span style="color: green">' . esc_html__( 'Approve', WCC_DOMAIN ) . '</span>';
-                break;
-              case 1:
-                echo '<span style="">' . esc_html__( 'Pending', WCC_DOMAIN ) . '</span>';
-                break;
-              case 0:
-                echo '<span style="color: red">' . esc_html__( 'Reject', WCC_DOMAIN ) . '</span>';
-                break;
-            }
-            ?>
-          </td>
-          <td><a href="<?php echo $link; ?>#customer_card_section"
-                 target="_blank"><?php esc_html_e( 'Edit', WCC_DOMAIN ); ?></a></td>
-        </tr>
-        <?php
-      }
-      ?>
-      </tbody>
-    </table>
-    <?php
+    if ( isset ( $_GET['tab'] ) ) {
+      $this->settings_tabs( $_GET['tab'] );
+    } else {
+      $this->settings_tabs( 'dashboard' );
+    }
+
+    switch ( $tab ) {
+      case 'dashboard' :
+        WCC_DASHBOARD::admin_gui();
+        break;
+      case 'export' :
+        WCC_EXPORTER::admin_gui();
+        break;
+      case 'import' :
+        WCC_IMPORTER::admin_gui();
+        break;
+    }
+
+    $this->importer->import();
+  }
+
+  /**
+   * Render setting page nav
+   *
+   * @param string $current
+   */
+  public function settings_tabs( $current = 'dashboard' ) {
+    $tabs = array(
+      'dashboard' => __( 'Dashboard', WCC_DOMAIN ),
+      'export'    => __( 'Export', WCC_DOMAIN ),
+      'import'    => __( 'Import', WCC_DOMAIN ),
+    );
+
+    echo '<h2 class="nav-tab-wrapper">';
+    foreach ( $tabs as $tab => $name ) {
+      $class = ( $tab == $current ) ? ' nav-tab-active' : '';
+
+        $href   = "?page=customers-card&tab=$tab";
+        $target = "_self";
+
+      echo "<a class='nav-tab$class' href='$href' target='$target'>$name</a>";
+
+    }
+    echo '</h2>';
   }
 
   /**
@@ -191,6 +186,7 @@ class WOO_CUSTOMER_CARD {
 
   /**
    * Validate customer card number
+   *
    * @param $args
    */
   public function account_details_errors( $args ) {
@@ -216,6 +212,7 @@ class WOO_CUSTOMER_CARD {
 
   /**
    * Save customer card to database and send notification
+   *
    * @param $user_id
    */
   public function save_account_details( $user_id ) {
@@ -273,14 +270,9 @@ class WOO_CUSTOMER_CARD {
     }
   }
 
-//  public function make_field_required( $required_fields ) {
-//    $required_fields['customer_card'] = __( 'User card is required', WCC_DOMAIN );
-//
-//    return $required_fields;
-//  }
-
   /**
    * Render user customer card field in user-edit page
+   *
    * @param $user
    */
   public function show_edit_user_profile( $user ) {
@@ -353,6 +345,7 @@ class WOO_CUSTOMER_CARD {
 
   /**
    * Save user customer card in admin-side and send notification
+   *
    * @param $user_id
    */
   public function update_profile_fields( $user_id ) {
@@ -388,6 +381,7 @@ class WOO_CUSTOMER_CARD {
 
   /**
    * Set discount in woocommerce cart
+   *
    * @param $cart
    */
   public function woocommerce_cart_discount( $cart ) {
