@@ -25,7 +25,22 @@ class WCC_HELPER {
    * @return array
    */
   public static function get_user_id_list( $role ) {
-    $args = array( 'fields' => array( 'ID' ) );
+    $args = array(
+      'fields'     => array( 'ID' ),
+      'meta_query' => array(
+        'relation' => 'OR',
+        array(
+          'key'     => 'customer_card',
+          'value'   => '',
+          'compare' => '>'
+        ),
+        array(
+          'key'     => 'customer_card_prev',
+          'value'   => '',
+          'compare' => '>'
+        ),
+      )
+    );
 
     if ( ! empty( $role ) ) {
       $args['role'] = $role;
