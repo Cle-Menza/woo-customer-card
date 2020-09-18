@@ -35,8 +35,8 @@ class WOO_CUSTOMER_CARD {
       'customer_card_approve'       => esc_html__( 'Approve', WCC_DOMAIN )
     );
 
-    $this->exporter = new WCC_EXPORTER( $this->user_data, $this->user_meta );
-    $this->importer = new WCC_IMPORTER( $this->user_data, $this->user_meta );
+    $this->exporter  = new WCC_EXPORTER( $this->user_data, $this->user_meta );
+    $this->importer  = new WCC_IMPORTER( $this->user_data, $this->user_meta );
     $this->dashboard = new WCC_DASHBOARD( $this->user_data, $this->user_meta );
 
     add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_public_scripts_and_styles' ) );
@@ -132,8 +132,8 @@ class WOO_CUSTOMER_CARD {
     foreach ( $tabs as $tab => $name ) {
       $class = ( $tab == $current ) ? ' nav-tab-active' : '';
 
-        $href   = "?page=customers-card&tab=$tab";
-        $target = "_self";
+      $href   = "?page=customers-card&tab=$tab";
+      $target = "_self";
 
       echo "<a class='nav-tab$class' href='$href' target='$target'>$name</a>";
 
@@ -219,7 +219,7 @@ class WOO_CUSTOMER_CARD {
     $send_notification           = false;
     $prev_customer_card          = get_the_author_meta( 'customer_card', $user_id );
     $prev_customer_card_discount = get_the_author_meta( 'customer_card_discount', $user_id );
-    $link                        = get_edit_user_link( $user_id );
+    $link                        = admin_url( 'user-edit.php?user_id=' ) . $user_id;
     $userdata                    = get_userdata( $user_id );
 
     if ( isset( $_POST['customer_card'] ) ) {
@@ -355,8 +355,17 @@ class WOO_CUSTOMER_CARD {
     $user_info              = get_userdata( $user_id );
 
     if ( current_user_can( 'edit_user', $user_id ) ) {
-      update_user_meta( $user_id, 'customer_card_discount', sanitize_text_field( $_POST['customer_card_discount'] ) );
-      update_user_meta( $user_id, 'customer_card_approve', sanitize_text_field( $_POST['customer_card_approve'] ) );
+      if ( $customer_card != $_POST['customer_card'] ) {
+        update_user_meta( $user_id, 'customer_card', sanitize_text_field( $_POST['customer_card'] ) );
+        update_user_meta( $user_id, 'customer_card_prev', $customer_card );
+      }
+      if ( $customer_card_discount != $_POST['customer_card_discount'] ) {
+        update_user_meta( $user_id, 'customer_card_discount', sanitize_text_field( $_POST['customer_card_discount'] ) );
+        update_user_meta( $user_id, 'customer_card_discount_prev', $customer_card_discount );
+      }
+      if ( $approve != $_POST['customer_card_approve'] ) {
+        update_user_meta( $user_id, 'customer_card_approve', sanitize_text_field( $_POST['customer_card_approve'] ) );
+      }
     }
 
     if ( $approve != $_POST['customer_card_approve'] && $_POST['customer_card_approve'] == 2 ) {
@@ -415,25 +424,26 @@ class WOO_CUSTOMER_CARD {
 
       if ( ! $_product->is_on_sale() ) {
         $discount += round( ( $regular_price * $item['quantity'] ) * $coefficient );
-        // debug
-        $debug_discount = round( ( $regular_price * $item['quantity'] ) * $coefficient );
-        $cart->add_fee( 'Not on sale - ' . $_product->name, - $debug_discount, false, 'standard' );
       } elseif ( $_product->is_on_sale() ) {
         $product_coefficient = 1 - ( $sale_price / $regular_price );
         if ( $product_coefficient < $coefficient ) {
           $different_coefficient = $coefficient - $product_coefficient;
           $discount              += round( ( $regular_price * $item['quantity'] ) * $different_coefficient );
-          // debug
-          $debug_discount = round( ( $regular_price * $item['quantity'] ) * $different_coefficient );
-          $cart->add_fee( 'On sale and personal discount biggest - ' . $_product->name, - $debug_discount, false, 'standard' );
-        } else {
-          // debug
-          $cart->add_fee( 'On sale, but sale price biggest - ' . $_product->name, 0, false, 'standard' );
         }
       }
     }
 
-    if ( $discount > 0 ) {
+    $coupons          = $cart->get_coupon_discount_totals();
+    $coupons_discount = 0;
+    foreach ( $coupons as $coupon ) {
+      $coupons_discount += round( $coupon );
+    }
+
+    if ( $discount > $coupons_discount ) {
+      $cart->set_coupon_discount_totals();
+    }
+
+    if ( $discount > 0 && $discount > $coupons_discount ) {
       $cart->add_fee( $label, - $discount, false, 'standard' );
     }
   }

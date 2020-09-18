@@ -75,7 +75,7 @@ class WCC_DASHBOARD {
       <tbody>
       <?php
       foreach ( $users as $user ) {
-        $link                        = get_edit_user_link( $user->ID );
+        $link                        = admin_url( 'user-edit.php?user_id=') . $user->ID;
         $customer_card               = get_the_author_meta( 'customer_card', $user->ID );
         $customer_card_prev          = get_the_author_meta( 'customer_card_prev', $user->ID );
         $customer_card_discount      = get_the_author_meta( 'customer_card_discount', $user->ID );
@@ -116,7 +116,6 @@ class WCC_DASHBOARD {
     </table>
     <?php
     if ( $total_users > $users_per_page ) {
-
       $pl_args = array(
         'base'    => add_query_arg( 'paged', '%#%' ),
         'format'  => '',
